@@ -5,10 +5,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Plus, Minus, Search, ShoppingCart, Loader2 } from 'lucide-react';
+import { Trash2, Plus, Minus, Search, ShoppingCart, Loader2, RefreshCw } from 'lucide-react';
 import { ping } from '@/services/ping';
-import { getProductos } from '@/services/productos'
 import React from 'react';
+import { initDatabase } from '@/services/database';
+import { cargarProductos, sincronizarProductos } from '@/services/sync';
 
 export function POS() {
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
@@ -17,24 +18,52 @@ export function POS() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  // Cargar productos al montar el componente
+
+
+  // Al cargar el componente POS
   React.useEffect(() => {
-    const cargarProductos = async () => {
+    const inicializar = async () => {
       try {
         setLoading(true);
-        const data = await getProductos(); // Ya viene formateado como Producto[]
-        setProductos(data);
+
+        // Inicializar base de datos SQLite
+        await initDatabase();
+
+        // Cargar productos (local + sync)
+        const productos = await cargarProductos();
+        setProductos(productos);
         setError(null);
+
       } catch (err) {
-        console.error('Error cargando productos:', err);
-        setError('No se pudieron cargar los productos');
+        console.error('Error inicializando:', err);
+        setError('Error al cargar productos');
       } finally {
         setLoading(false);
       }
     };
 
-    cargarProductos();
+    inicializar();
   }, []);
+
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      const sincronizado = await sincronizarProductos();
+
+      if (sincronizado) {
+        const productos = await cargarProductos();
+        setProductos(productos);
+        alert('✅ Productos actualizados');
+      } else {
+        alert('⚠️ Sin conexión, mostrando datos locales');
+      }
+    } catch (err) {
+      console.error('Error en refresh:', err);
+      alert('❌ Error al actualizar');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Buscar producto por código o nombre
   const buscarProducto = (query: string) => {
@@ -114,6 +143,15 @@ export function POS() {
           </h1>
           <Button onClick={testPing} variant="outline" className="mb-3 w-full">
             🌐 Test Conexión
+          </Button>
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            size="sm"
+            className="absolute right-4 top-4"
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
           {pingStatus && (
             <p className="text-sm mb-3 p-2 bg-slate-100 rounded">{pingStatus}</p>

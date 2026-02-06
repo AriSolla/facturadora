@@ -1,0 +1,15 @@
+import { Routes, Route } from 'react-router-dom';
+import { POS } from '@/components/POS';
+import { Home } from '@/components/Home';
+import { TestSync } from '@/components/TestSync';
+
+export function AppRoutes() {
+    return (
+        <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/test" element={<TestSync />} />
+            <Route path="/pos" element={<POS />} />
+
+        </Routes>
+    );
+}

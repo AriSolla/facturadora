@@ -9,5 +9,5 @@ export interface Producto {
   q_unidad: number; //cantidad unidad
   p_venta: number; //precio
   p_oferta: number; //oferta
-  t_modi: string; // ultima fecha modificada
+  tModi: string; // ultima fecha modificada
 }
