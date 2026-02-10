@@ -7,6 +7,7 @@ import { tieneInternet, sincronizarProductos } from '@/services/sync';
 import { obtenerProductosLocales } from '@/services/productosLocal';
 import { Button } from '@/components/ui/button';
 import { logger } from '@/services/logger';
+import { useApp } from '@/context/AppContext';
 
 interface SplashScreenProps {
     onReady: () => void;
@@ -15,6 +16,7 @@ interface SplashScreenProps {
 export function SplashScreen({ onReady }: SplashScreenProps) {
     const [status, setStatus] = useState('Inicializando sistema…');
     const [error, setError] = useState<string | null>(null);
+    const { actualizarUltimaSync } = useApp();
 
     useEffect(() => {
         // escuchar logs
@@ -53,6 +55,7 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
                 try {
                     setStatus('Sincronizando productos con la nube…');
                     await sincronizarProductos();
+                    actualizarUltimaSync();
                 } catch (syncError) {
                     console.warn('⚠️ Sync falló, usando datos locales', syncError);
                     // NO bloquea la app

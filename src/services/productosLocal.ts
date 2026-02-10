@@ -1,9 +1,13 @@
 import type { Producto } from '@/data/productos';
-import { getDatabase } from './database';
+import { getDatabase, isDatabaseAvailable } from './database';
 import { logger } from './logger';
 
 // Guardar múltiples productos (sync desde servidor)
 export async function guardarProductos(productos: Producto[]): Promise<void> {
+    if (!isDatabaseAvailable()) {
+    console.log('🌐 Modo web: guardado en SQLite omitido');
+    return;
+  }
   const db = getDatabase();
   
   try {
@@ -25,6 +29,11 @@ export async function guardarProductos(productos: Producto[]): Promise<void> {
 
 // Obtener todos los productos locales
 export async function obtenerProductosLocales(): Promise<Producto[]> {
+
+   if (!isDatabaseAvailable()) {
+    console.log('🌐 Modo web: retornando array vacío');
+    return [];
+  }
   const db = getDatabase();
   
   try {
@@ -55,9 +64,14 @@ export async function obtenerProductosLocales(): Promise<Producto[]> {
 
 // Buscar producto por código (para el scanner)
 export async function buscarProductoLocal(codigo: string): Promise<Producto | null> {
+   if (!isDatabaseAvailable()) {
+    console.log('🌐 Modo web: retornando array vacío');
+    return null;
+  }
   const db = getDatabase();
   
   try {
+    alert('codigo ' + codigo)
     const result = await db.query(
       'SELECT * FROM productos WHERE no_plu = ? LIMIT 1',
       [codigo]
@@ -89,6 +103,10 @@ export async function buscarProductoLocal(codigo: string): Promise<Producto | nu
 
 // Limpiar todos los productos (útil para re-sync completo)
 export async function limpiarProductos(): Promise<void> {
+   if (!isDatabaseAvailable()) {
+    console.log('🌐 Modo web: retornando array vacío');
+    return;
+  }
   const db = getDatabase();
   
   try {

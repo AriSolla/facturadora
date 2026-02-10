@@ -3,7 +3,9 @@ import { getProductos } from './productos';
 import { guardarProductos, obtenerProductosLocales } from './productosLocal';
 import { Network } from '@capacitor/network';
 import { logger } from './logger';
+import { Capacitor } from '@capacitor/core';
 
+const isNative = Capacitor.isNativePlatform();
 // Verificar si hay conexión a internet
 export async function tieneInternet(): Promise<boolean> {
   try {
@@ -28,16 +30,19 @@ export async function sincronizarProductos(): Promise<Producto[]> {
     logger.info('🔄 Sincronizando productos desde servidor...');
     
     const productosServidor = await getProductos();
-    await guardarProductos(productosServidor);
     
+    // Solo guardar en SQLite si estamos en Android
+    if (isNative) {
+      await guardarProductos(productosServidor);
     logger.info(`✅ Sincronización completa: ${productosServidor.length} productos`);
-    
-    // Retornar productos actualizados
-    return await obtenerProductosLocales();
+      return await obtenerProductosLocales();
+    } else {
+      logger.info(`✅ Modo web: ${productosServidor.length} productos desde servidor`);
+      return productosServidor;
+    }
     
   } catch (error) {
-    alert('❌ Error en sincronización: ' +error);
-    // En caso de error, retornar lo que hay local
+    console.error('❌ Error en sincronización:', error);
     return await obtenerProductosLocales();
   }
 }
@@ -45,20 +50,24 @@ export async function sincronizarProductos(): Promise<Producto[]> {
 // Cargar productos (local primero, luego sync)
 export async function cargarProductos() {
   try {
+     if (!isNative) {
+      console.log('🌐 Modo web: cargando desde servidor');
+      return await getProductos();
+    }
     // 1. Intentar cargar desde local (rápido)
     const locales = await obtenerProductosLocales();
-    
+
     // 2. Sincronizar en background
     const sincronizado = await sincronizarProductos();
-    
+
     // 3. Si sincronizó, traer datos actualizados
     if (sincronizado) {
       return await obtenerProductosLocales();
     }
-    
+
     // 4. Si no sincronizó, retornar datos locales
     return locales;
-    
+
   } catch (error) {
     console.error('❌ Error cargando productos:', error);
     throw error;
@@ -69,22 +78,22 @@ export async function cargarProductos() {
 let syncInterval: number | null = null;
 // Iniciar sincronización automática cada X minutos
 export function iniciarSyncAutomatico(
-  minutos: number = 1, 
+  minutos: number = 1,
   onSync?: (productos: Producto[]) => void
 ): void {
   detenerSyncAutomatico();
-  
+
   alert(`🔄 Sync automático iniciado (cada ${minutos} minutos)`);
-  
+
   // Primera sync
   sincronizarProductos().then(productos => {
     if (onSync) onSync(productos);
   });
-  
+
   // Syncs periódicas
   syncInterval = setInterval(async () => {
     alert('⏰ Ejecutando sync automático...');
-    
+
     const hayInternet = await tieneInternet();
     if (hayInternet) {
       const productos = await sincronizarProductos();
